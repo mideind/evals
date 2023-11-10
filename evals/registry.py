@@ -84,6 +84,13 @@ def is_chat_model(model_name: str) -> bool:
     return False
 
 
+def model_supports_json_only_output(model_name: str) -> bool:
+    if model_name in {"gpt-4-1106-preview"}:
+        return True
+
+    return False
+
+
 T = TypeVar("T")
 RawRegistry = dict[str, Any]
 

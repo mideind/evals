@@ -5,8 +5,10 @@ from typing import Any, Dict, List, Mapping, Union, cast
 import numpy as np
 
 import evals
+from evals import OpenAIChatCompletionFn
 from evals.api import CompletionFn
 from evals.record import RecorderBase
+from evals.registry import model_supports_json_only_output
 
 
 def json_match(sampled_json: Any, correct_json: Any) -> bool:
@@ -68,11 +70,24 @@ class JsonMatch(evals.Eval):
         if not isinstance(correct_answers, list):
             correct_answers = [correct_answers]
 
-        result = self.completion_fn(
-            prompt=prompt,
-            temperature=0.0,  # Q: why are these hardcoded?
-            max_tokens=self.max_tokens,
-        )
+        # Checking the class breaks the CompletionFn abstraction, but non-chat completions will result
+        # in an error when given the `response_format` parameter.
+        if isinstance(self.completion_fn, OpenAIChatCompletionFn) and model_supports_json_only_output(
+            self.completion_fn.model
+        ):
+            result = self.completion_fn(
+                prompt=prompt,
+                temperature=0.0,
+                max_tokens=self.max_tokens,
+                response_format={ "type": "json_object" },
+            )
+        else:
+            result = self.completion_fn(
+                prompt=prompt,
+                temperature=0.0,
+                max_tokens=self.max_tokens,
+            )
+
         sampled = result.get_completions()[0]
 
         sampled_json: Any
